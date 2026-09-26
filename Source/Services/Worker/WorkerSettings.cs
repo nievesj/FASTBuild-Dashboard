@@ -174,6 +174,10 @@ public class WorkerSettings
         bytes.AddRange(BitConverter.GetBytes(NumCPUsToUse));
         bytes.AddRange(BitConverter.GetBytes(StartMinimized));
 
+        // The worker exe directory may not exist yet (e.g. running the dashboard from a
+        // folder without an FBuild\ subfolder) - create it or this throws DirectoryNotFound
+        // and takes the whole app down at DI startup.
+        Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath));
         File.WriteAllBytes(SettingsPath, bytes.ToArray());
         _readWriteLock = false;
     }

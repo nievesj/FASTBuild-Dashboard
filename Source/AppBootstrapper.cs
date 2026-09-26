@@ -121,8 +121,17 @@ internal class AppBootstrapper : BootstrapperBase
             Logger.Info("Copying NLog.config");
             var shadowNLogConfigPath = Path.Combine(shadowDirectory, "NLog.config");
             var NLogConfigPath = Path.Combine($"{assemblyDirectory}","NLog.config");
-            File.Copy(NLogConfigPath, shadowNLogConfigPath, true);
-            
+            if (File.Exists(NLogConfigPath))
+            {
+                File.Copy(NLogConfigPath, shadowNLogConfigPath, true);
+            }
+            else
+            {
+                // NLog.config is content-copied next to the exe in real builds, but a bare exe
+                // (e.g. collected without config files) must not abort the rest of the shadow
+                // setup - this copy previously threw IOException and skipped the FBuild folder copy.
+                Logger.Warn($"NLog.config not found next to the executable ({NLogConfigPath}) - shadow process will have no logging targets");
+            }
             var workerFolder = Path.Combine(assemblyDirectory, "FBuild");
             var workerTargetFolder = Path.Combine(shadowDirectory, "FBuild");
             if (Directory.Exists(workerFolder))
