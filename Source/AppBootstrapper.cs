@@ -138,9 +138,24 @@ internal class AppBootstrapper : BootstrapperBase
             {
                 Logger.Info("Copying FBuild folder");
                 Directory.CreateDirectory(workerTargetFolder);
-                // Copy all worker files.
+                // Copy all worker files. One locked file (e.g. a worker from a previous shadow
+                // instance that was force-killed while still holding the exe) must not abort the
+                // remaining copies - the shadow then falls back to whatever is already in place.
                 foreach (var newPath in Directory.GetFiles(workerFolder, "*.*", SearchOption.TopDirectoryOnly))
-                    File.Copy(newPath, newPath.Replace(workerFolder, workerTargetFolder), true);
+                {
+                    try
+                    {
+                        File.Copy(newPath, newPath.Replace(workerFolder, workerTargetFolder), true);
+                    }
+                    catch (IOException ex)
+                    {
+                        Logger.Error($"Unable to copy '{newPath}' into the shadow directory: {ex.Message}");
+                    }
+                    catch (UnauthorizedAccessException ex)
+                    {
+                        Logger.Error($"Unable to copy '{newPath}' into the shadow directory: {ex.Message}");
+                    }
+                }
             }
             else
             {
