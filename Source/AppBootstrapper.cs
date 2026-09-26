@@ -10,6 +10,7 @@ using Caliburn.Micro;
 using FastBuild.Dashboard.Services;
 using FastBuild.Dashboard.Services.Build;
 using FastBuild.Dashboard.Services.Build.SourceEditor;
+using FastBuild.Dashboard.Services.Update;
 using FastBuild.Dashboard.Services.Worker;
 using FastBuild.Dashboard.Support;
 using FastBuild.Dashboard.ViewModels;
@@ -37,6 +38,7 @@ internal class AppBootstrapper : BootstrapperBase
         _container.Singleton<IEventAggregator, EventAggregator>();
         _container.Singleton<IBuildViewportService, BuildViewportService>();
         _container.Singleton<IBrokerageService, BrokerageService>();
+        _container.Singleton<IDeploymentService, DeploymentService>();
         _container.Singleton<IWorkerAgentService, WorkerAgentService>();
         _container.Singleton<IExternalSourceEditorService, ExternalSourceEditorService>();
         

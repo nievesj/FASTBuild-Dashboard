@@ -107,6 +107,11 @@ internal class TrayNotifier
             }
     }
 
+    public void ShowBalloon(string title, string text)
+    {
+        _trayNotifier.ShowBalloonTip(5000, title, text, WinForms.ToolTipIcon.Info);
+    }
+
     public void Close()
     {
         _trayNotifier.Visible = false;

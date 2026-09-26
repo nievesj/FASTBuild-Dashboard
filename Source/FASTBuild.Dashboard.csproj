@@ -158,6 +158,10 @@
         <Compile Include="Services\Worker\WorkerCoreState.cs" />
         <Compile Include="Services\Worker\WorkerCoreStatus.cs" />
         <Compile Include="Services\BrokerageService.cs" />
+        <Compile Include="Services\Update\DeploymentModels.cs" />
+        <Compile Include="Services\Update\DeploymentEvaluator.cs" />
+        <Compile Include="Services\Update\IDeploymentService.cs" />
+        <Compile Include="Services\Update\DeploymentService.cs" />
         <Compile Include="Services\Worker\WorkerRunStateChangedEventArgs.cs" />
         <Compile Include="Support\BoolToVisibilityConverter.cs" />
         <Compile Include="Support\DependencyObjectExtensions.cs" />

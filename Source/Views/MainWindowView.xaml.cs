@@ -1,17 +1,22 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Caliburn.Micro;
 using FastBuild.Dashboard.Configuration;
+using FastBuild.Dashboard.Services.Update;
 using FastBuild.Dashboard.Services.Worker;
 using FastBuild.Dashboard.ViewModels;
+using NLog;
 
 namespace FastBuild.Dashboard.Views;
 
 public partial class MainWindowView
 {
+    private static readonly Logger Logger = NLog.LogManager.GetCurrentClassLogger();
+
     private readonly TrayNotifier _trayNotifier;
     private DispatcherTimer _delayUpdateProfileTimer;
     private bool _isClosingFromXButton = true;
@@ -23,6 +28,7 @@ public partial class MainWindowView
         InitializeComponent();
         InitializeWindowDimensions();
         _trayNotifier = new TrayNotifier(this);
+        SubscribeToDeploymentUpdates();
         UpdateTrayIcon();
 
         DataContextChanged += OnDataContextChanged;
@@ -49,8 +55,60 @@ public partial class MainWindowView
 
     protected override void OnClosed(EventArgs e)
     {
+        UnsubscribeFromDeploymentUpdates();
         _trayNotifier.Close();
         base.OnClosed(e);
+    }
+
+    private void SubscribeToDeploymentUpdates()
+    {
+        var deploymentService = IoC.Get<IDeploymentService>();
+        deploymentService.WorkerUpdateApplied += DeploymentService_WorkerUpdateApplied;
+        deploymentService.DashboardUpdateAvailable += DeploymentService_DashboardUpdateAvailable;
+    }
+
+    private void UnsubscribeFromDeploymentUpdates()
+    {
+        var deploymentService = IoC.Get<IDeploymentService>();
+        deploymentService.WorkerUpdateApplied -= DeploymentService_WorkerUpdateApplied;
+        deploymentService.DashboardUpdateAvailable -= DeploymentService_DashboardUpdateAvailable;
+    }
+
+    private void DeploymentService_WorkerUpdateApplied(DeploymentCandidate candidate)
+    {
+        // Raised on the deployment poll timer thread - marshal before touching WPF.
+        Dispatcher.BeginInvoke(new System.Action(() =>
+            _trayNotifier.ShowBalloon("FASTBuild Dashboard",
+                $"FASTBuild worker updated to {candidate.ShareVersion} (effective on next restart)")));
+    }
+
+    private void DeploymentService_DashboardUpdateAvailable(DeploymentCandidate candidate)
+    {
+        // Raised on the deployment poll timer thread - marshal before touching WPF.
+        Dispatcher.BeginInvoke(new System.Action(() =>
+        {
+            var choice = MessageBox.Show(
+                $"A new FASTBuild Dashboard ({candidate.ShareVersion}) is available. Update now?",
+                "FASTBuild Dashboard", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (choice != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = candidate.ShareExePath,
+                    Arguments = "/SILENT /NORESTART /SUPPRESSMSGBOXES",
+                    UseShellExecute = true
+                });
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, $"Failed to launch Dashboard self-update from {candidate.ShareExePath}");
+            }
+        }));
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
