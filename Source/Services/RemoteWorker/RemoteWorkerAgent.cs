@@ -18,6 +18,7 @@ internal class RemoteWorkerAgent : IRemoteWorkerAgent
     public string DomainName { get; private set; }
     public string FQDN { get; private set; }
     public string CPUs { get; private set; }
+    public string CPUDetails { get; private set; }
     public string Memory { get; private set; }
     public string Mode { get; private set; }
 
@@ -39,16 +40,25 @@ internal class RemoteWorkerAgent : IRemoteWorkerAgent
                 try
                 {
                     var data = line.Split(':');
-                    propertyName = data[0].Trim().Replace(" ", "");
-                    propertyValue = data[1].Trim();
+                    if ( data.Length < 2 )
+                    {
+                        continue; // Not a property line (e.g. blank)
+                    }
+                    propertyName = data[ 0 ].Trim().Replace( " ", "" );
+                    propertyValue = data[ 1 ].Trim();
 
-                    var property = typeof(RemoteWorkerAgent).GetProperty(propertyName);
-                    property.SetValue(worker, propertyValue);
+                    var property = typeof( RemoteWorkerAgent ).GetProperty( propertyName );
+                    if ( property == null )
+                    {
+                        // Unknown property (e.g. written by a newer worker build) -
+                        // skip the line instead of discarding the whole worker.
+                        continue;
+                    }
+                    property.SetValue( worker, propertyValue );
                 }
                 catch
                 {
-                    //Console.WriteLine($"WARNING: {filePath} has invalid values (Property: {propertyName} - Value: {propertyValue}).");
-                    return null;
+                    continue; // Malformed line - skip rather than discarding the worker
                 }
             }
         }
@@ -58,7 +68,7 @@ internal class RemoteWorkerAgent : IRemoteWorkerAgent
             return null;
         }
 
-        if (worker.HostName == Dns.GetHostName())
+        if ( string.Equals( worker.HostName, Dns.GetHostName(), System.StringComparison.OrdinalIgnoreCase ) )
             worker.IsLocal = true;
         else
             worker.IsLocal = false;
