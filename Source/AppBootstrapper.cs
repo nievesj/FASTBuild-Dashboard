@@ -143,9 +143,19 @@ internal class AppBootstrapper : BootstrapperBase
                 // remaining copies - the shadow then falls back to whatever is already in place.
                 foreach (var newPath in Directory.GetFiles(workerFolder, "*.*", SearchOption.TopDirectoryOnly))
                 {
+                    var targetPath = newPath.Replace(workerFolder, workerTargetFolder);
+
+                    // Worker settings are user state (worker mode etc.) mutated by the running
+                    // shadow - re-copying them on every spawn would reset the user's chosen
+                    // mode on every dashboard restart. Seed only when the shadow has none yet.
+                    if (newPath.EndsWith(".settings", StringComparison.OrdinalIgnoreCase) && File.Exists(targetPath))
+                    {
+                        continue;
+                    }
+
                     try
                     {
-                        File.Copy(newPath, newPath.Replace(workerFolder, workerTargetFolder), true);
+                        File.Copy(newPath, targetPath, true);
                     }
                     catch (IOException ex)
                     {
